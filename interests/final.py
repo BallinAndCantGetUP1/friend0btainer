@@ -3,6 +3,7 @@ import pandas as pd
 import hashlib
 import os
 import pickle
+import time
 
 # Load users from CSV
 def load_users():
@@ -40,6 +41,18 @@ def load_chat(username1, username2):
         with open(filename, 'rb') as file:
             chat_history = pickle.load(file)
     return chat_history
+
+# Save friends data
+def save_friends_data():
+    with open('friends_data.pkl', 'wb') as file:
+        pickle.dump(st.session_state['friends'], file)
+
+# Load friends data
+def load_friends_data():
+    if os.path.exists('friends_data.pkl'):
+        with open('friends_data.pkl', 'rb') as file:
+            return pickle.load(file)
+    return {}
 
 # Sign in / Sign up function
 def signingin():
@@ -106,9 +119,10 @@ def display_signin():
                 st.session_state['logged_in'] = True
                 st.session_state['username'] = username
                 if 'friends' not in st.session_state:
-                    st.session_state['friends'] = {}
+                    st.session_state['friends'] = load_friends_data()
                 if username not in st.session_state['friends']:
                     st.session_state['friends'][username] = {'sent': [], 'received': [], 'friends': []}
+                save_friends_data()
                 st.write("Logged In!")
             else:
                 st.write("Invalid username or password.")
@@ -214,6 +228,7 @@ def friend_request(other_user):
             if st.button(f"Send Friend Request to {other_user}", key=f"send_{other_user}"):
                 st.session_state['friends'][current_user]['sent'].append(other_user)
                 st.session_state['friends'][other_user]['received'].append(current_user)
+                save_friends_data()
                 st.write(f"Friend request sent to {other_user}")
 
         if current_user in st.session_state['friends'][other_user]['received']:
@@ -222,7 +237,15 @@ def friend_request(other_user):
                 st.session_state['friends'][other_user]['friends'].append(current_user)
                 st.session_state['friends'][current_user]['received'].remove(other_user)
                 st.session_state['friends'][other_user]['sent'].remove(current_user)
+                save_friends_data()
                 st.write(f"Friend request accepted from {other_user}")
+
+        if other_user in st.session_state['friends'][current_user]['friends']:
+            if st.button(f"Remove {other_user} from friends", key=f"remove_{other_user}"):
+                st.session_state['friends'][current_user]['friends'].remove(other_user)
+                st.session_state['friends'][other_user]['friends'].remove(current_user)
+                save_friends_data()
+                st.write(f"{other_user} has been removed from friends")
 
 # Chat function
 def chat():
@@ -237,6 +260,9 @@ def chat():
             message = {"sender": st.session_state['username'], "text": new_message}
             save_chat(st.session_state['username'], friend, message)
             st.experimental_rerun()
+        # Auto-refresh chat every 2 seconds
+        time.sleep(2)
+        st.experimental_rerun()
     else:
         st.write("No friends to chat with. Send some friend requests!")
 
