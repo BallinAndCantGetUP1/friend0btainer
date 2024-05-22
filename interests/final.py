@@ -4,14 +4,6 @@ import hashlib
 import os
 import pickle
 
-# Initialize session state
-if 'logged_in' not in st.session_state:
-    st.session_state['logged_in'] = False
-if 'username' not in st.session_state:
-    st.session_state['username'] = ''
-if 'friends' not in st.session_state:
-    st.session_state['friends'] = {}
-
 # Load users from CSV
 def load_users():
     try:
@@ -46,13 +38,8 @@ def load_chat(chat_id):
         return []
     else:
         with open(filename, 'rb') as file:
-            return pickle.load(file)
-
-# Delete chat messages
-def delete_chat(chat_id):
-    filename = f'chat_{chat_id}.pkl'
-    if os.path.exists(filename):
-        os.remove(filename)
+            chat_history = pickle.load(file)
+    return chat_history
 
 # Save friends data
 def save_friends_data():
@@ -71,7 +58,7 @@ def signingin():
     st.title("Sign In / Sign Up")
 
     # File selection
-    file_options = ['Sign Up', 'Sign In']
+    file options = ['Sign Up', 'Sign In']
     selected_file = st.selectbox('Choose What To Do:', file_options)
 
     # Display content based on file selection
@@ -98,8 +85,6 @@ def display_signup():
                 st.write("Username cannot be empty.")
             elif username in users_df['username'].values:
                 st.write("Username already exists. Please choose a different username.")
-            elif email in users_df['email'].values:
-                st.write("This email is already in use. Please use a different email.")
             else:
                 hashed_password = hash_password(password)
                 new_user = pd.DataFrame({
@@ -211,86 +196,36 @@ def display_profile():
         save_users(users_df)
         st.session_state.clear()
         st.write("Your account has been deleted.")
+
 # Display all profiles on home screen
 def display_all_profiles():
     if 'logged_in' in st.session_state and st.session_state['logged_in']:
         users_df = load_users()
-        current_user = st.session_state['username']
         for index, user in users_df.iterrows():
             color = user['color'] if pd.notna(user['color']) else "#FFFFFF"
             with st.container():
                 st.markdown(f"""
                 <div style='background-color:{color}; padding: 10px; border-radius: 5px;'>
                 """, unsafe_allow_html=True)
+                st.write(f"**Username:** {user['username']}")
                 if pd.notna(user['profile_pic']):
                     st.image(user['profile_pic'])
-                st.write(f"**{user['username']}**")
-                st.write(f"**{user['email']}**")
-                interests = Interests(
-                    user['sports'], 
-                    user['games'], 
-                    user['books'], 
-                    user['food'], 
-                    user['hobbies'].split(',') if pd.notna(user['hobbies']) else []
-                )
+                interests = Interests(user['sports'], user['games'], user['books'], user['food'], user['hobbies'].split(',') if pd.notna(user['hobbies']) else [])
                 interests.display()
-
-                # Check if user is friends or friend request is pending
-                if current_user in st.session_state['friends'].get(user['username'], {}).get('friends', []):
-                    if st.button(f"Chat with {user['username']}", key=f"chat_{user['username']}"):
-                        # Start chat with friend
-                        # You can implement this part to initiate the chat
-                        pass
-                    if st.button(f"Remove {user['username']} from friends", key=f"remove_{user['username']}"):
-                        # Remove user from friends
-                        if user['username'] in st.session_state['friends'][current_user]['friends']:
-                            st.session_state['friends'][current_user]['friends'].remove(user['username'])
-                            if current_user in st.session_state['friends'].get(user['username'], {}).get('friends', []):
-                                st.session_state['friends'][user['username']]['friends'].remove(current_user)
-                            save_friends_data()
-                            st.experimental_rerun()
-                        else:
-                            st.write(f"{user['username']} is not in your friend list.")
-                elif current_user in st.session_state['friends'].get(user['username'], {}).get('received', []):
-                    if st.button(f"Receive Friend Request", key=f"accept_{user['username']}"):
-                        # Accept friend request
-                        st.session_state['friends'][current_user]['friends'].append(user['username'])
-                        st.session_state['friends'][user['username']]['friends'].append(current_user)
-                        st.session_state['friends'][current_user]['received'].remove(user['username'])
-                        st.session_state['friends'][user['username']]['sent'].remove(current_user)
-                        save_friends_data()
-                        st.experimental_rerun()
-                elif current_user in st.session_state['friends'].get(user['username'], {}).get('sent', []):
-                    st.write("Friend Request Sent")
-                else:
-                    if current_user in st.session_state['friends'].get(user['username'], {}).get('received', []):
-                        if st.button(f"Receive Friend Request", key=f"accept_{user['username']}"):
-                            # Accept friend request
-                            st.session_state['friends'][current_user]['friends'].append(user['username'])
-                            st.session_state['friends'][user['username']]['friends'].append(current_user)
-                            st.session_state['friends'][current_user]['received'].remove(user['username'])
-                            st.session_state['friends'][user['username']]['sent'].remove(current_user)
-                            save_friends_data()
-                            st.experimental_rerun()
-                    else:
-                        if st.button(f"Send Friend Request to {user['username']}", key=f"send_{user['username']}"):
-                            # Send friend request
-                            st.session_state['friends'][current_user]['sent'].append(user['username'])
-                            st.session_state['friends'][user['username']]['received'].append(current_user)
-                            save_friends_data()
-                            st.experimental_rerun()
-
+                friend_request(user['username'])
                 st.markdown("</div>", unsafe_allow_html=True)
     else:
-        st.write("Please sign in to view profiles.")
+        st.write("Please sign in first.")
 
+# Friend request function
+def friend_request(other_user):
+    if other_user != st.session_state['username']:
+        current_user = st.session_state['username']
+        if 'friends' not in st.session_state:
+            st.session_state['friends'] = {}
 
-# Search for friends
-def search_for_friends():
-    users_df = load_users()
-    current_user = st.session_state['username']
-    other_user = st.text_input("Enter username to search:")
-    if other_user and other_user in users_df['username'].values:
+        if current_user not in st.session_state['friends']:
+            st.session_state['friends'][current_user] = {'sent': [], 'received': [], 'friends': [], 'group_chats': []}
         if other_user not in st.session_state['friends']:
             st.session_state['friends'][other_user] = {'sent': [], 'received': [], 'friends': [], 'group_chats': []}
 
@@ -321,7 +256,6 @@ def search_for_friends():
 def chat():
     friends = st.session_state['friends'].get(st.session_state['username'], {}).get('friends', [])
     group_chats = st.session_state['friends'].get(st.session_state['username'], {}).get('group_chats', [])
-    
     if friends or group_chats:
         chat_options = friends + group_chats
         chat_id = st.selectbox('Select a chat:', chat_options)
@@ -344,19 +278,6 @@ def chat():
 
             save_chat(chat_id, message)
             st.experimental_rerun()
-
-        if st.button("Delete All Messages", key="delete_messages"):
-            delete_chat(chat_id)
-            st.experimental_rerun()
-
-        if chat_id in group_chats:
-            if st.button("Leave Group Chat", key="leave_group"):
-                st.session_state['friends'][st.session_state['username']]['group_chats'].remove(chat_id)
-                for friend in friends:
-                    if 'group_chats' in st.session_state['friends'][friend] and chat_id in st.session_state['friends'][friend]['group_chats']:
-                        st.session_state['friends'][friend]['group_chats'].remove(chat_id)
-                save_friends_data()
-                st.experimental_rerun()
     else:
         st.write("No friends or group chats to chat with. Send some friend requests or create group chats!")
 
@@ -371,8 +292,6 @@ def create_group_chat():
             group_id = f"group_{st.session_state['username']}_{group_name}"
             selected_friends.append(st.session_state['username'])
             for friend in selected_friends:
-                if 'group_chats' not in st.session_state['friends'][friend]:
-                    st.session_state['friends'][friend]['group_chats'] = []
                 st.session_state['friends'][friend]['group_chats'].append(group_id)
             save_friends_data()
             st.write("Group chat created!")
