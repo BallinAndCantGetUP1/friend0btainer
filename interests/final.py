@@ -263,4 +263,3 @@ elif sidebar_option == "Chat":
         chat()
     else:
         st.write("Please sign in first.")
-
