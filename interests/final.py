@@ -3,7 +3,6 @@ import pandas as pd
 import hashlib
 import os
 import pickle
-import time
 
 # Load users from CSV
 def load_users():
@@ -255,7 +254,6 @@ def friend_request(other_user):
 def chat():
     friends = st.session_state['friends'].get(st.session_state['username'], {}).get('friends', [])
     group_chats = st.session_state['friends'].get(st.session_state['username'], {}).get('group_chats', [])
-    
     if friends or group_chats:
         chat_options = friends + group_chats
         chat_id = st.selectbox('Select a chat:', chat_options)
@@ -265,18 +263,9 @@ def chat():
             st.write(f"{message['sender']}: {message['text']}")
             if 'reply_to' in message:
                 st.write(f"↪️ {message['reply_to']['sender']}: {message['reply_to']['text']}", unsafe_allow_html=True)
-            
-            if 'media' in message:
-                media = message['media']
-                if 'url' in media and os.path.exists(media['url']):
-                    if media['type'] == 'image':
-                        st.image(media['url'])
-                    elif media['type'] == 'file':
-                        st.download_button('Download', open(media['url'], 'rb'), file_name=os.path.basename(media['url']))
 
         new_message = st.text_input("Enter a message:", key="new_message")
         reply_to = st.selectbox("Reply to:", ["None"] + [f"{msg['sender']}: {msg['text']}" for msg in chat_history], key="reply_to")
-        media = st.file_uploader("Upload media:", type=["jpg", "png", "mp4", "pdf"], key="media")
         
         if st.button("Send", key="send_message"):
             message = {"sender": st.session_state['username'], "text": new_message}
@@ -284,22 +273,11 @@ def chat():
             if reply_to != "None":
                 reply_index = [f"{msg['sender']}: {msg['text']}" for msg in chat_history].index(reply_to) - 1
                 message["reply_to"] = chat_history[reply_index]
-            
-            if media:
-                media_path = f"media/{chat_id}_{media.name}"
-                os.makedirs('media', exist_ok=True)
-                with open(media_path, 'wb') as file:
-                    file.write(media.read())
-                media_type = 'image' if media.type.startswith('image') else 'file'
-                message['media'] = {"type": media_type, "url": media_path}
 
             save_chat(chat_id, message)
             st.experimental_rerun()
     else:
         st.write("No friends or group chats to chat with. Send some friend requests or create group chats!")
-
-# Make sure to handle other parts of your code similarly
-
 
 # Group chat creation function
 def create_group_chat():
