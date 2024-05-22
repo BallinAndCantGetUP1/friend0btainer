@@ -198,7 +198,7 @@ def display_profile():
         st.image(user_data['profile_pic'])
     interests.display()
 
-    if st.button("Delete Account"):
+    if st.button("Delete Account", key="delete_account"):
         users_df = users_df[users_df['username'] != st.session_state['username']]
         save_users(users_df)
         st.session_state.clear()
@@ -274,7 +274,7 @@ def chat():
     group_chats = st.session_state['friends'].get(st.session_state['username'], {}).get('group_chats', [])
     if friends or group_chats:
         chat_options = friends + group_chats
-        chat_id = st.selectbox('Select a chat:', chat_options)
+        chat_id = st.selectbox('Select a chat:', chat_options, key="select_chat")
         chat_history = load_chat(chat_id)
 
         for message in chat_history:
@@ -295,8 +295,14 @@ def chat():
             save_chat(chat_id, message)
             st.experimental_rerun()
 
-        if st.button("Delete Chat History"):
+        if st.button("Delete Chat History", key="delete_chat"):
             delete_chat_history(chat_id)
+            st.experimental_rerun()
+
+        if "group_" in chat_id and st.button("Leave Group Chat", key="leave_group"):
+            for friend in st.session_state['friends'][st.session_state['username']]['group_chats']:
+                st.session_state['friends'][friend]['group_chats'].remove(chat_id)
+            save_friends_data()
             st.experimental_rerun()
 
         # Automatically refresh the chat every 0.5 seconds
@@ -308,10 +314,10 @@ def chat():
 # Group chat creation function
 def create_group_chat():
     friends = st.session_state['friends'].get(st.session_state['username'], {}).get('friends', [])
-    group_name = st.text_input("Group Name")
-    selected_friends = st.multiselect("Select friends to add to group:", friends)
+    group_name = st.text_input("Group Name", key="group_name")
+    selected_friends = st.multiselect("Select friends to add to group:", friends, key="selected_friends")
 
-    if st.button("Create Group Chat"):
+    if st.button("Create Group Chat", key="create_group"):
         if group_name and selected_friends:
             group_id = f"group_{st.session_state['username']}_{group_name}"
             selected_friends.append(st.session_state['username'])
@@ -323,7 +329,7 @@ def create_group_chat():
             st.write("Please enter a group name, and select at least one friend.")
 
 # Sidebar navigation
-sidebar_option = st.sidebar.radio("Navigation", ["Home", "Interests", "Sign In", "Profile", "Chat", "Create Group Chat"])
+sidebar_option = st.sidebar.radio("Navigation", ["Home", "Interests", "Sign In", "Profile", "Chat", "Create Group Chat"], key="sidebar_nav")
 if sidebar_option == "Interests":
     if 'logged_in' in st.session_state and st.session_state['logged_in']:
         give_int()
