@@ -10,7 +10,7 @@ if 'logged_in' not in st.session_state:
 if 'username' not in st.session_state:
     st.session_state['username'] = ''
 if 'friends' not in st.session_state:
-    st.session_state['friends'] = load_friends_data()
+    st.session_state['friends'] = {}
 
 # Load users from CSV
 def load_users():
@@ -342,7 +342,6 @@ if sidebar_option == "Interests":
 elif sidebar_option == "Home":
     st.write('Welcome to the Home page! Use this tool to help you find friends.')
     display_all_profiles()
-    search_for_friends()  # Add this line to show the search for friends feature on the Home page
 elif sidebar_option == "Sign In":
     st.session_state['username'] = ''
     signingin()
