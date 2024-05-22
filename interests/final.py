@@ -237,13 +237,13 @@ def display_all_profiles():
                     user['hobbies'].split(',') if pd.notna(user['hobbies']) else []
                 )
                 interests.display()
-
+                
                 # Add friend request button if not friends
                 if user['username'] not in current_friends and user['username'] != current_user:
                     if st.button(f"Send Friend Request to {user['username']}"):
                         if user['username'] not in st.session_state['friends']:
                             st.session_state['friends'][user['username']] = {'sent': [], 'received': [], 'friends': [], 'group_chats': []}
-                        friends_data['sent'].append(user['username'])
+                        st.session_state['friends'][user['username']]['sent'].append(current_user)
                         st.session_state['friends'][user['username']]['received'].append(current_user)
                         save_friends_data()
                         st.write(f"Friend request sent to {user['username']}")
