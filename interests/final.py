@@ -249,7 +249,7 @@ def display_all_profiles():
                         save_friends_data()
                         st.experimental_rerun()
                 elif current_user in st.session_state['friends'].get(user['username'], {}).get('received', []):
-                    if st.button(f"Receive Friend Request from {user['username']}", key=f"accept_{user['username']}"):
+                    if st.button(f"Receive Friend Request", key=f"accept_{user['username']}"):
                         # Accept friend request
                         st.session_state['friends'][current_user]['friends'].append(user['username'])
                         st.session_state['friends'][user['username']]['friends'].append(current_user)
@@ -257,6 +257,8 @@ def display_all_profiles():
                         st.session_state['friends'][user['username']]['sent'].remove(current_user)
                         save_friends_data()
                         st.experimental_rerun()
+                elif current_user in st.session_state['friends'].get(user['username'], {}).get('sent', []):
+                    st.write("Friend Request Sent")
                 else:
                     if st.button(f"Send Friend Request to {user['username']}", key=f"send_{user['username']}"):
                         # Send friend request
