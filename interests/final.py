@@ -267,9 +267,16 @@ def chat():
             
             if 'media' in message:
                 if message['media']['type'] == 'image':
-                    st.image(message['media']['url'])
+                    if os.path.exists(message['media']['url']):
+                        st.image(message['media']['url'])
+                    else:
+                        st.write("Error: Image file not found.")
                 elif message['media']['type'] == 'file':
-                    st.download_button('Download', data=message['media']['url'], file_name=message['media']['filename'])
+                    if os.path.exists(message['media']['url']):
+                        with open(message['media']['url'], 'rb') as file:
+                            st.download_button('Download', file, file_name=message['media']['filename'])
+                    else:
+                        st.write("Error: File not found.")
 
         new_message = st.text_input("Enter a message:", key="new_message")
         reply_to = st.selectbox("Reply to:", ["None"] + [f"{msg['sender']}: {msg['text']}" for msg in chat_history], key="reply_to")
