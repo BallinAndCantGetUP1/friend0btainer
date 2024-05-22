@@ -216,6 +216,9 @@ def display_profile():
 def display_all_profiles():
     if 'logged_in' in st.session_state and st.session_state['logged_in']:
         users_df = load_users()
+        current_user = st.session_state['username']
+        friends_data = st.session_state['friends'].get(current_user, {})
+        current_friends = friends_data.get('friends', [])
         for index, user in users_df.iterrows():
             color = user['color'] if pd.notna(user['color']) else "#FFFFFF"
             with st.container():
@@ -234,9 +237,32 @@ def display_all_profiles():
                     user['hobbies'].split(',') if pd.notna(user['hobbies']) else []
                 )
                 interests.display()
+
+                # Add friend request button if not friends
+                if user['username'] not in current_friends and user['username'] != current_user:
+                    if st.button(f"Send Friend Request to {user['username']}"):
+                        friends_data['sent'].append(user['username'])
+                        st.session_state['friends'][user['username']]['received'].append(current_user)
+                        save_friends_data()
+                        st.write(f"Friend request sent to {user['username']}")
+
+                # Add remove friend button if already friends
+                elif user['username'] in current_friends:
+                    if st.button(f"Remove {user['username']} from friends"):
+                        friends_data['friends'].remove(user['username'])
+                        st.session_state['friends'][user['username']]['friends'].remove(current_user)
+                        # Remove chat if exists
+                        chat_id = f"{current_user}_{user['username']}"
+                        if chat_id in st.session_state['friends']:
+                            del st.session_state['friends'][chat_id]
+                            delete_chat(chat_id)
+                        save_friends_data()
+                        st.write(f"{user['username']} has been removed from friends")
+
                 st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.write("Please sign in to view profiles.")
+
 
 # Search for friends
 def search_for_friends():
