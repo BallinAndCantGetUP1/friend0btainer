@@ -238,10 +238,20 @@ def display_all_profiles():
 
                 # Check if user is friends or friend request is pending
                 if current_user in st.session_state['friends'].get(user['username'], {}).get('friends', []):
+                    if st.button(f"Chat with {user['username']}", key=f"chat_{user['username']}"):
+                        # Start chat with friend
+                        # You can implement this part to initiate the chat
+                        pass
                     if st.button(f"Remove {user['username']} from friends", key=f"remove_{user['username']}"):
-                        st.session_state['friends'][current_user]['received'].remove(user['username'])
-                        save_friends_data()
-                        st.experimental_rerun()
+                        # Remove user from friends
+                        if user['username'] in st.session_state['friends'][current_user]['friends']:
+                            st.session_state['friends'][current_user]['friends'].remove(user['username'])
+                            if current_user in st.session_state['friends'].get(user['username'], {}).get('friends', []):
+                                st.session_state['friends'][user['username']]['friends'].remove(current_user)
+                            save_friends_data()
+                            st.experimental_rerun()
+                        else:
+                            st.write(f"{user['username']} is not in your friend list.")
                 elif current_user in st.session_state['friends'].get(user['username'], {}).get('received', []):
                     if st.button(f"Receive Friend Request", key=f"accept_{user['username']}"):
                         # Accept friend request
@@ -251,13 +261,6 @@ def display_all_profiles():
                         st.session_state['friends'][user['username']]['sent'].remove(current_user)
                         save_friends_data()
                         st.experimental_rerun()
-                        # Automatically add friend to chat sidebar
-                        if 'group_chats' not in st.session_state:
-                            st.session_state['group_chats'] = []
-                        chat_id = f"{current_user}_{user['username']}"
-                        if chat_id not in st.session_state['group_chats']:
-                            st.session_state['group_chats'].append(chat_id)
-                            st.experimental_rerun()
                 elif current_user in st.session_state['friends'].get(user['username'], {}).get('sent', []):
                     st.write("Friend Request Sent")
                 else:
