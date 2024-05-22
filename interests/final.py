@@ -212,24 +212,29 @@ def display_all_profiles():
                 st.markdown(f"""
                 <div style='background-color:{color}; padding: 10px; border-radius: 5px;'>
                 """, unsafe_allow_html=True)
-                st.write(f"**Username:** {user['username']}")
                 if pd.notna(user['profile_pic']):
                     st.image(user['profile_pic'])
-                interests = Interests(user['sports'], user['games'], user['books'], user['food'], user['hobbies'].split(',') if pd.notna(user['hobbies']) else [])
+                st.write(f"**{user['username']}**")
+                st.write(f"**{user['email']}**")
+                interests = Interests(
+                    user['sports'], 
+                    user['games'], 
+                    user['books'], 
+                    user['food'], 
+                    user['hobbies'].split(',') if pd.notna(user['hobbies']) else []
+                )
                 interests.display()
-                friend_request(user['username'])
                 st.markdown("</div>", unsafe_allow_html=True)
     else:
-        st.write("Please sign in first.")
+        st.write("Please sign in to view profiles.")
 
-# Friend request function
-def friend_request(other_user):
-    if other_user != st.session_state['username']:
-        current_user = st.session_state['username']
-        if 'friends' not in st.session_state:
-            st.session_state['friends'] = {}
-
-        if current_user not in st.session_state['friends']:
+# Search for friends
+def search_for_friends():
+    users_df = load_users()
+    current_user = st.session_state['username']
+    other_user = st.text_input("Enter username to search:")
+    if other_user and other_user in users_df['username'].values:
+        if other_user not in st.session_state['friends']:
             st.session_state['friends'][current_user] = {'sent': [], 'received': [], 'friends': [], 'group_chats': []}
         if other_user not in st.session_state['friends']:
             st.session_state['friends'][other_user] = {'sent': [], 'received': [], 'friends': [], 'group_chats': []}
@@ -310,6 +315,8 @@ def create_group_chat():
             group_id = f"group_{st.session_state['username']}_{group_name}"
             selected_friends.append(st.session_state['username'])
             for friend in selected_friends:
+                if 'group_chats' not in st.session_state['friends'][friend]:
+                    st.session_state['friends'][friend]['group_chats'] = []
                 st.session_state['friends'][friend]['group_chats'].append(group_id)
             save_friends_data()
             st.write("Group chat created!")
