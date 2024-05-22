@@ -58,7 +58,7 @@ def signingin():
     st.title("Sign In / Sign Up")
 
     # File selection
-    file_options = ['Sign Up', 'Sign In']
+    file options = ['Sign Up', 'Sign In']
     selected_file = st.selectbox('Choose What To Do:', file_options)
 
     # Display content based on file selection
@@ -202,16 +202,18 @@ def display_all_profiles():
     if 'logged_in' in st.session_state and st.session_state['logged_in']:
         users_df = load_users()
         for index, user in users_df.iterrows():
+            color = user['color'] if pd.notna(user['color']) else "#FFFFFF"
             with st.container():
-                st.markdown("---")  # Adds a horizontal line for separation
+                st.markdown(f"""
+                <div style='background-color:{color}; padding: 10px; border-radius: 5px;'>
+                """, unsafe_allow_html=True)
                 st.write(f"**Username:** {user['username']}")
                 if pd.notna(user['profile_pic']):
                     st.image(user['profile_pic'])
-                color = user['color'] if pd.notna(user['color']) else "#FFFFFF"
-                st.markdown(f"<div style='color:{color}'>Profile Color</div>", unsafe_allow_html=True)
                 interests = Interests(user['sports'], user['games'], user['books'], user['food'], user['hobbies'].split(',') if pd.notna(user['hobbies']) else [])
                 interests.display()
                 friend_request(user['username'])
+                st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.write("Please sign in first.")
 
