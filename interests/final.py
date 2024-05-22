@@ -255,6 +255,7 @@ def friend_request(other_user):
 def chat():
     friends = st.session_state['friends'].get(st.session_state['username'], {}).get('friends', [])
     group_chats = st.session_state['friends'].get(st.session_state['username'], {}).get('group_chats', [])
+    
     if friends or group_chats:
         chat_options = friends + group_chats
         chat_id = st.selectbox('Select a chat:', chat_options)
@@ -266,17 +267,12 @@ def chat():
                 st.write(f"↪️ {message['reply_to']['sender']}: {message['reply_to']['text']}", unsafe_allow_html=True)
             
             if 'media' in message:
-                if message['media']['type'] == 'image':
-                    if os.path.exists(message['media']['url']):
-                        st.image(message['media']['url'])
-                    else:
-                        st.write("Error: Image file not found.")
-                elif message['media']['type'] == 'file':
-                    if os.path.exists(message['media']['url']):
-                        with open(message['media']['url'], 'rb') as file:
-                            st.download_button('Download', file, file_name=message['media']['filename'])
-                    else:
-                        st.write("Error: File not found.")
+                media = message['media']
+                if 'url' in media and os.path.exists(media['url']):
+                    if media['type'] == 'image':
+                        st.image(media['url'])
+                    elif media['type'] == 'file':
+                        st.download_button('Download', open(media['url'], 'rb'), file_name=os.path.basename(media['url']))
 
         new_message = st.text_input("Enter a message:", key="new_message")
         reply_to = st.selectbox("Reply to:", ["None"] + [f"{msg['sender']}: {msg['text']}" for msg in chat_history], key="reply_to")
@@ -290,17 +286,20 @@ def chat():
                 message["reply_to"] = chat_history[reply_index]
             
             if media:
-                media_path = f'media/{time.time()}_{media.name}'
+                media_path = f"media/{chat_id}_{media.name}"
                 os.makedirs('media', exist_ok=True)
                 with open(media_path, 'wb') as file:
                     file.write(media.read())
                 media_type = 'image' if media.type.startswith('image') else 'file'
-                message['media'] = {"type": media_type, "url": media_path, "filename": media.name}
+                message['media'] = {"type": media_type, "url": media_path}
 
             save_chat(chat_id, message)
             st.experimental_rerun()
     else:
         st.write("No friends or group chats to chat with. Send some friend requests or create group chats!")
+
+# Make sure to handle other parts of your code similarly
+
 
 # Group chat creation function
 def create_group_chat():
