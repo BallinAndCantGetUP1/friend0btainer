@@ -217,8 +217,6 @@ def display_all_profiles():
     if 'logged_in' in st.session_state and st.session_state['logged_in']:
         users_df = load_users()
         current_user = st.session_state['username']
-        friends_data = st.session_state['friends'].get(current_user, {})
-        current_friends = friends_data.get('friends', [])
         for index, user in users_df.iterrows():
             color = user['color'] if pd.notna(user['color']) else "#FFFFFF"
             with st.container():
@@ -237,30 +235,32 @@ def display_all_profiles():
                     user['hobbies'].split(',') if pd.notna(user['hobbies']) else []
                 )
                 interests.display()
-                
-                # Add friend request button if not friends
-                if user['username'] not in current_friends and user['username'] != current_user:
-                    if st.button(f"Send Friend Request to {user['username']}"):
-                        if user['username'] not in st.session_state['friends']:
-                            st.session_state['friends'][user['username']] = {'sent': [], 'received': [], 'friends': [], 'group_chats': []}
-                        st.session_state['friends'][user['username']]['sent'].append(current_user)
-                        st.session_state['friends'][user['username']]['received'].append(current_user)
-                        save_friends_data()
-                        st.write(f"Friend request sent to {user['username']}")
 
-
-                # Add remove friend button if already friends
-                elif user['username'] in current_friends:
-                    if st.button(f"Remove {user['username']} from friends"):
-                        friends_data['friends'].remove(user['username'])
+                # Check if friend request has been sent to this user
+                if current_user not in st.session_state['friends'].get(user['username'], {}).get('sent', []):
+                    if current_user in st.session_state['friends'].get(user['username'], {}).get('received', []):
+                        if st.button(f"Receive Friend Request from {user['username']}", key=f"accept_{user['username']}"):
+                            # Accept friend request
+                            st.session_state['friends'][current_user]['friends'].append(user['username'])
+                            st.session_state['friends'][user['username']]['friends'].append(current_user)
+                            st.session_state['friends'][current_user]['received'].remove(user['username'])
+                            st.session_state['friends'][user['username']]['sent'].remove(current_user)
+                            save_friends_data()
+                            st.experimental_rerun()
+                    else:
+                        if st.button(f"Send Friend Request to {user['username']}", key=f"send_{user['username']}"):
+                            # Send friend request
+                            st.session_state['friends'][current_user]['sent'].append(user['username'])
+                            st.session_state['friends'][user['username']]['received'].append(current_user)
+                            save_friends_data()
+                            st.experimental_rerun()
+                else:
+                    if st.button(f"Remove {user['username']} from friends", key=f"remove_{user['username']}"):
+                        # Remove user from friends
+                        st.session_state['friends'][current_user]['friends'].remove(user['username'])
                         st.session_state['friends'][user['username']]['friends'].remove(current_user)
-                        # Remove chat if exists
-                        chat_id = f"{current_user}_{user['username']}"
-                        if chat_id in st.session_state['friends']:
-                            del st.session_state['friends'][chat_id]
-                            delete_chat(chat_id)
                         save_friends_data()
-                        st.write(f"{user['username']} has been removed from friends")
+                        st.experimental_rerun()
 
                 st.markdown("</div>", unsafe_allow_html=True)
     else:
