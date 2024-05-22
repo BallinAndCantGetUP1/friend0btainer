@@ -3,7 +3,7 @@ import pandas as pd
 import hashlib
 import os
 import pickle
-import time
+from streamlit_autorefresh import st_autorefresh
 
 # Load users from CSV
 def load_users():
@@ -261,7 +261,7 @@ def chat():
         chat_options = friends + group_chats
         chat_id = st.selectbox('Select a chat:', chat_options)
         chat_history = load_chat(chat_id)
-        
+
         for message in chat_history:
             st.write(f"{message['sender']}: {message['text']}")
             if 'reply_to' in message:
@@ -269,10 +269,10 @@ def chat():
 
         new_message = st.text_input("Enter a message:", key="new_message")
         reply_to = st.selectbox("Reply to:", ["None"] + [f"{msg['sender']}: {msg['text']}" for msg in chat_history], key="reply_to")
-        
+
         if st.button("Send", key="send_message"):
             message = {"sender": st.session_state['username'], "text": new_message}
-            
+
             if reply_to != "None":
                 reply_index = [f"{msg['sender']}: {msg['text']}" for msg in chat_history].index(reply_to) - 1
                 message["reply_to"] = chat_history[reply_index]
@@ -280,9 +280,8 @@ def chat():
             save_chat(chat_id, message)
             st.experimental_rerun()
 
-        # Automatically refresh the chat every 2 seconds
-        time.sleep(2)
-        st.experimental_rerun()
+        # Automatically refresh the chat every 0.5 seconds
+        st_autorefresh(interval=500)
     else:
         st.write("No friends or group chats to chat with. Send some friend requests or create group chats!")
 
@@ -291,7 +290,7 @@ def create_group_chat():
     friends = st.session_state['friends'].get(st.session_state['username'], {}).get('friends', [])
     group_name = st.text_input("Group Name")
     selected_friends = st.multiselect("Select friends to add to group:", friends)
-    
+
     if st.button("Create Group Chat"):
         if group_name and selected_friends:
             group_id = f"group_{st.session_state['username']}_{group_name}"
