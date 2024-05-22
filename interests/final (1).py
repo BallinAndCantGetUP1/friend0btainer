@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import hashlib
 import os
-import pickle   morty, morty im a pickle
+import pickle   
 
 # Load users from CSV
 def load_users():
@@ -249,3 +249,5 @@ elif sidebar_option == "Chat":
         chat()
     else:
         st.write("Please sign in first.")
+
+Morty, Morty im a, a pickle, a Pickle Morty!!!
