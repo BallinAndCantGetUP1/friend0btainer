@@ -3,7 +3,7 @@ import pandas as pd
 import hashlib
 import os
 import pickle
-from streamlit_autorefresh import st_autorefresh
+import time
 
 # Load users from CSV
 def load_users():
@@ -281,7 +281,8 @@ def chat():
             st.experimental_rerun()
 
         # Automatically refresh the chat every 0.5 seconds
-        st_autorefresh(interval=500)
+        time.sleep(0.5)
+        st.experimental_rerun()
     else:
         st.write("No friends or group chats to chat with. Send some friend requests or create group chats!")
 
