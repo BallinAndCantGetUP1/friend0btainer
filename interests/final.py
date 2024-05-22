@@ -38,8 +38,13 @@ def load_chat(chat_id):
         return []
     else:
         with open(filename, 'rb') as file:
-            chat_history = pickle.load(file)
-    return chat_history
+            return pickle.load(file)
+
+# Delete chat messages
+def delete_chat(chat_id):
+    filename = f'chat_{chat_id}.pkl'
+    if os.path.exists(filename):
+        os.remove(filename)
 
 # Save friends data
 def save_friends_data():
@@ -278,6 +283,19 @@ def chat():
 
             save_chat(chat_id, message)
             st.experimental_rerun()
+
+        if st.button("Delete All Messages", key="delete_messages"):
+            delete_chat(chat_id)
+            st.experimental_rerun()
+
+        if chat_id in group_chats:
+            if st.button("Leave Group Chat", key="leave_group"):
+                st.session_state['friends'][st.session_state['username']]['group_chats'].remove(chat_id)
+                for friend in friends:
+                    if chat_id in st.session_state['friends'][friend]['group_chats']:
+                        st.session_state['friends'][friend]['group_chats'].remove(chat_id)
+                save_friends_data()
+                st.experimental_rerun()
     else:
         st.write("No friends or group chats to chat with. Send some friend requests or create group chats!")
 
