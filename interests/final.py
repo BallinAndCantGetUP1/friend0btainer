@@ -239,9 +239,7 @@ def display_all_profiles():
                 # Check if user is friends or friend request is pending
                 if current_user in st.session_state['friends'].get(user['username'], {}).get('friends', []):
                     if st.button(f"Remove {user['username']} from friends", key=f"remove_{user['username']}"):
-                        # Remove user from friends
-                        st.session_state['friends'][current_user]['friends'].remove(user['username'])
-                        st.session_state['friends'][user['username']]['friends'].remove(current_user)
+                        st.session_state['friends'][current_user]['received'].remove(user['username'])
                         save_friends_data()
                         st.experimental_rerun()
                 elif current_user in st.session_state['friends'].get(user['username'], {}).get('received', []):
