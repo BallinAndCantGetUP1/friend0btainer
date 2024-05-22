@@ -236,29 +236,32 @@ def display_all_profiles():
                 )
                 interests.display()
 
-                # Check if friend request has been sent to this user
-                if current_user not in st.session_state['friends'].get(user['username'], {}).get('sent', []):
-                    if current_user in st.session_state['friends'].get(user['username'], {}).get('received', []):
-                        if st.button(f"Receive Friend Request from {user['username']}", key=f"accept_{user['username']}"):
-                            # Accept friend request
-                            st.session_state['friends'][current_user]['friends'].append(user['username'])
-                            st.session_state['friends'][user['username']]['friends'].append(current_user)
-                            st.session_state['friends'][current_user]['received'].remove(user['username'])
-                            st.session_state['friends'][user['username']]['sent'].remove(current_user)
-                            save_friends_data()
-                            st.experimental_rerun()
-                    else:
-                        if st.button(f"Send Friend Request to {user['username']}", key=f"send_{user['username']}"):
-                            # Send friend request
-                            st.session_state['friends'][current_user]['sent'].append(user['username'])
-                            st.session_state['friends'][user['username']]['received'].append(current_user)
-                            save_friends_data()
-                            st.experimental_rerun()
-                else:
+                # Check if user is friends or friend request is pending
+                if current_user in st.session_state['friends'].get(user['username'], {}).get('friends', []):
+                    if st.button(f"Chat with {user['username']}", key=f"chat_{user['username']}"):
+                        # Start chat with friend
+                        # You can implement this part to initiate the chat
+                        pass
                     if st.button(f"Remove {user['username']} from friends", key=f"remove_{user['username']}"):
                         # Remove user from friends
                         st.session_state['friends'][current_user]['friends'].remove(user['username'])
                         st.session_state['friends'][user['username']]['friends'].remove(current_user)
+                        save_friends_data()
+                        st.experimental_rerun()
+                elif current_user in st.session_state['friends'].get(user['username'], {}).get('received', []):
+                    if st.button(f"Receive Friend Request from {user['username']}", key=f"accept_{user['username']}"):
+                        # Accept friend request
+                        st.session_state['friends'][current_user]['friends'].append(user['username'])
+                        st.session_state['friends'][user['username']]['friends'].append(current_user)
+                        st.session_state['friends'][current_user]['received'].remove(user['username'])
+                        st.session_state['friends'][user['username']]['sent'].remove(current_user)
+                        save_friends_data()
+                        st.experimental_rerun()
+                else:
+                    if st.button(f"Send Friend Request to {user['username']}", key=f"send_{user['username']}"):
+                        # Send friend request
+                        st.session_state['friends'][current_user]['sent'].append(user['username'])
+                        st.session_state['friends'][user['username']]['received'].append(current_user)
                         save_friends_data()
                         st.experimental_rerun()
 
