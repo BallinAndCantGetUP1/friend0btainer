@@ -3,6 +3,7 @@ import pandas as pd
 import hashlib
 import os
 import pickle
+import time
 
 # Load users from CSV
 def load_users():
@@ -229,7 +230,7 @@ def friend_request(other_user):
         if other_user not in st.session_state['friends']:
             st.session_state['friends'][other_user] = {'sent': [], 'received': [], 'friends': [], 'group_chats': []}
 
-        if other_user not in st.session_state['friends'][current_user]['sent'] and other_user not in st.session_state['friends'][current_user]['friends']:
+        if other_user not in st.session_state['friends'][current_user]['friends']:
             if st.button(f"Send Friend Request to {other_user}", key=f"send_{other_user}"):
                 st.session_state['friends'][current_user]['sent'].append(other_user)
                 st.session_state['friends'][other_user]['received'].append(current_user)
@@ -278,6 +279,10 @@ def chat():
 
             save_chat(chat_id, message)
             st.experimental_rerun()
+
+        # Automatically refresh the chat every 2 seconds
+        time.sleep(2)
+        st.experimental_rerun()
     else:
         st.write("No friends or group chats to chat with. Send some friend requests or create group chats!")
 
