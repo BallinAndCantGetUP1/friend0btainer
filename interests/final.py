@@ -236,7 +236,7 @@ def friend_request(other_user):
                 save_friends_data()
                 st.write(f"Friend request sent to {other_user}")
 
-        if current_user in st.session_state['friends'][other_user]['received']:
+        if other_user in st.session_state['friends'][current_user]['received'] and current_user != other_user:
             if st.button(f"Accept Friend Request from {other_user}", key=f"accept_{other_user}"):
                 st.session_state['friends'][current_user]['friends'].append(other_user)
                 st.session_state['friends'][other_user]['friends'].append(current_user)
