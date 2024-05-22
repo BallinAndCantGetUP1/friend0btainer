@@ -4,6 +4,14 @@ import hashlib
 import os
 import pickle
 
+# Initialize session state
+if 'logged_in' not in st.session_state:
+    st.session_state['logged_in'] = False
+if 'username' not in st.session_state:
+    st.session_state['username'] = ''
+if 'friends' not in st.session_state:
+    st.session_state['friends'] = load_friends_data()
+
 # Load users from CSV
 def load_users():
     try:
@@ -237,8 +245,6 @@ def search_for_friends():
     other_user = st.text_input("Enter username to search:")
     if other_user and other_user in users_df['username'].values:
         if other_user not in st.session_state['friends']:
-            st.session_state['friends'][current_user] = {'sent': [], 'received': [], 'friends': [], 'group_chats': []}
-        if other_user not in st.session_state['friends']:
             st.session_state['friends'][other_user] = {'sent': [], 'received': [], 'friends': [], 'group_chats': []}
 
         if other_user not in st.session_state['friends'][current_user]['sent'] and other_user not in st.session_state['friends'][current_user]['friends']:
@@ -307,7 +313,6 @@ def chat():
     else:
         st.write("No friends or group chats to chat with. Send some friend requests or create group chats!")
 
-
 # Group chat creation function
 def create_group_chat():
     friends = st.session_state['friends'].get(st.session_state['username'], {}).get('friends', [])
@@ -337,6 +342,7 @@ if sidebar_option == "Interests":
 elif sidebar_option == "Home":
     st.write('Welcome to the Home page! Use this tool to help you find friends.')
     display_all_profiles()
+    search_for_friends()  # Add this line to show the search for friends feature on the Home page
 elif sidebar_option == "Sign In":
     st.session_state['username'] = ''
     signingin()
