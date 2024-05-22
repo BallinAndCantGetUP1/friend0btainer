@@ -211,7 +211,6 @@ def display_profile():
         save_users(users_df)
         st.session_state.clear()
         st.write("Your account has been deleted.")
-
 # Display all profiles on home screen
 def display_all_profiles():
     if 'logged_in' in st.session_state and st.session_state['logged_in']:
@@ -264,12 +263,22 @@ def display_all_profiles():
                 elif current_user in st.session_state['friends'].get(user['username'], {}).get('sent', []):
                     st.write("Friend Request Sent")
                 else:
-                    if st.button(f"Send Friend Request to {user['username']}", key=f"send_{user['username']}"):
-                        # Send friend request
-                        st.session_state['friends'][current_user]['sent'].append(user['username'])
-                        st.session_state['friends'][user['username']]['received'].append(current_user)
-                        save_friends_data()
-                        st.experimental_rerun()
+                    if current_user in st.session_state['friends'].get(user['username'], {}).get('received', []):
+                        if st.button(f"Receive Friend Request", key=f"accept_{user['username']}"):
+                            # Accept friend request
+                            st.session_state['friends'][current_user]['friends'].append(user['username'])
+                            st.session_state['friends'][user['username']]['friends'].append(current_user)
+                            st.session_state['friends'][current_user]['received'].remove(user['username'])
+                            st.session_state['friends'][user['username']]['sent'].remove(current_user)
+                            save_friends_data()
+                            st.experimental_rerun()
+                    else:
+                        if st.button(f"Send Friend Request to {user['username']}", key=f"send_{user['username']}"):
+                            # Send friend request
+                            st.session_state['friends'][current_user]['sent'].append(user['username'])
+                            st.session_state['friends'][user['username']]['received'].append(current_user)
+                            save_friends_data()
+                            st.experimental_rerun()
 
                 st.markdown("</div>", unsafe_allow_html=True)
     else:
