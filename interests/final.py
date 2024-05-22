@@ -267,9 +267,9 @@ def chat():
             
             if 'media' in message:
                 if message['media']['type'] == 'image':
-                    st.image(message['media']['content'])
+                    st.image(message['media']['url'])
                 elif message['media']['type'] == 'file':
-                    st.download_button('Download', message['media']['content'], message['media']['filename'])
+                    st.download_button('Download', data=message['media']['url'], file_name=message['media']['filename'])
 
         new_message = st.text_input("Enter a message:", key="new_message")
         reply_to = st.selectbox("Reply to:", ["None"] + [f"{msg['sender']}: {msg['text']}" for msg in chat_history], key="reply_to")
@@ -283,9 +283,12 @@ def chat():
                 message["reply_to"] = chat_history[reply_index]
             
             if media:
-                media_content = media.read()
+                media_path = f'media/{time.time()}_{media.name}'
+                os.makedirs('media', exist_ok=True)
+                with open(media_path, 'wb') as file:
+                    file.write(media.read())
                 media_type = 'image' if media.type.startswith('image') else 'file'
-                message['media'] = {"type": media_type, "content": media_content, "filename": media.name}
+                message['media'] = {"type": media_type, "url": media_path, "filename": media.name}
 
             save_chat(chat_id, message)
             st.experimental_rerun()
