@@ -42,12 +42,6 @@ def load_chat(username1, username2):
             chat_history = pickle.load(file)
     return chat_history
 
-# Clear chat messages
-def clear_chat(username1, username2):
-    filename = f'chat_{username1}_{username2}.pkl' if username1 < username2 else f'chat_{username2}_{username1}.pkl'
-    if os.path.exists(filename):
-        os.remove(filename)
-
 # Save friends data
 def save_friends_data():
     with open('friends_data.pkl', 'wb') as file:
@@ -266,12 +260,6 @@ def chat():
             message = {"sender": st.session_state['username'], "text": new_message}
             save_chat(st.session_state['username'], friend, message)
             st.experimental_rerun()
-        if st.button("Clear Chat", key="clear_chat"):
-            clear_chat(st.session_state['username'], friend)
-            st.experimental_rerun()
-        # Auto-refresh chat every 2 seconds
-        time.sleep(2)
-        st.experimental_rerun()
     else:
         st.write("No friends to chat with. Send some friend requests!")
 
