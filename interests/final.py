@@ -90,6 +90,8 @@ def display_signup():
                 st.write("Username cannot be empty.")
             elif username in users_df['username'].values:
                 st.write("Username already exists. Please choose a different username.")
+            elif email in users_df['email'].values:
+                st.write("This email is already in use. Please use a different email.")
             else:
                 hashed_password = hash_password(password)
                 new_user = pd.DataFrame({
