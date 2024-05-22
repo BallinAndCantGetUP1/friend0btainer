@@ -3,13 +3,14 @@ import pandas as pd
 import hashlib
 import os
 import pickle
+import time
 
 # Load users from CSV
 def load_users():
     try:
         return pd.read_csv('users.csv')
     except (FileNotFoundError, pd.errors.EmptyDataError):
-        return pd.DataFrame(columns=['username', 'email', 'password', 'profile_pic', 'sports', 'games', 'books', 'food', 'hobbies'])
+        return pd.DataFrame(columns=['username', 'email', 'password', 'profile_pic', 'color', 'sports', 'games', 'books', 'food', 'hobbies'])
 
 # Save users to CSV
 def save_users(users_df):
@@ -20,8 +21,8 @@ def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
 # Save chat messages
-def save_chat(username1, username2, message):
-    filename = f'chat_{username1}_{username2}.pkl' if username1 < username2 else f'chat_{username2}_{username1}.pkl'
+def save_chat(chat_id, message):
+    filename = f'chat_{chat_id}.pkl'
     if not os.path.exists(filename):
         chat_history = []
     else:
@@ -32,14 +33,26 @@ def save_chat(username1, username2, message):
         pickle.dump(chat_history, file)
 
 # Load chat messages
-def load_chat(username1, username2):
-    filename = f'chat_{username1}_{username2}.pkl' if username1 < username2 else f'chat_{username2}_{username1}.pkl'
+def load_chat(chat_id):
+    filename = f'chat_{chat_id}.pkl'
     if not os.path.exists(filename):
         return []
     else:
         with open(filename, 'rb') as file:
             chat_history = pickle.load(file)
     return chat_history
+
+# Save friends data
+def save_friends_data():
+    with open('friends_data.pkl', 'wb') as file:
+        pickle.dump(st.session_state['friends'], file)
+
+# Load friends data
+def load_friends_data():
+    if os.path.exists('friends_data.pkl'):
+        with open('friends_data.pkl', 'rb') as file:
+            return pickle.load(file)
+    return {}
 
 # Sign in / Sign up function
 def signingin():
@@ -80,6 +93,7 @@ def display_signup():
                     'email': [email],
                     'password': [hashed_password],
                     'profile_pic': [None],
+                    'color': [None],
                     'sports': [None],
                     'games': [None],
                     'books': [None],
@@ -106,9 +120,10 @@ def display_signin():
                 st.session_state['logged_in'] = True
                 st.session_state['username'] = username
                 if 'friends' not in st.session_state:
-                    st.session_state['friends'] = {}
+                    st.session_state['friends'] = load_friends_data()
                 if username not in st.session_state['friends']:
-                    st.session_state['friends'][username] = {'sent': [], 'received': [], 'friends': []}
+                    st.session_state['friends'][username] = {'sent': [], 'received': [], 'friends': [], 'group_chats': []}
+                save_friends_data()
                 st.write("Logged In!")
             else:
                 st.write("Invalid username or password.")
@@ -138,6 +153,7 @@ def give_int():
         food = st.text_input("Enter your favorite food:")
         hobbies = st.text_input("Enter at least one other hobby (if more, separate by using commas):")
         profile_pic = st.file_uploader("Upload Profile Picture", type=["jpg", "png"])
+        color = st.color_picker("Pick a color for your profile:", "#00f900")
         submitted = st.form_submit_button("Submit")
 
     if submitted:
@@ -152,7 +168,7 @@ def give_int():
             with open(profile_pic_path, 'wb') as file:
                 file.write(profile_pic.getbuffer())
         
-        users_df.loc[users_df['username'] == st.session_state['username'], ['sports', 'games', 'books', 'food', 'hobbies', 'profile_pic']] = [sport, game, book, food, hobbies, profile_pic_path]
+        users_df.loc[users_df['username'] == st.session_state['username'], ['sports', 'games', 'books', 'food', 'hobbies', 'profile_pic', 'color']] = [sport, game, book, food, hobbies, profile_pic_path, color]
         save_users(users_df)
         my_interests.display()
 
@@ -187,14 +203,18 @@ def display_all_profiles():
     if 'logged_in' in st.session_state and st.session_state['logged_in']:
         users_df = load_users()
         for index, user in users_df.iterrows():
+            color = user['color'] if pd.notna(user['color']) else "#FFFFFF"
             with st.container():
-                st.markdown("---")  # Adds a horizontal line for separation
+                st.markdown(f"""
+                <div style='background-color:{color}; padding: 10px; border-radius: 5px;'>
+                """, unsafe_allow_html=True)
                 st.write(f"**Username:** {user['username']}")
                 if pd.notna(user['profile_pic']):
                     st.image(user['profile_pic'])
                 interests = Interests(user['sports'], user['games'], user['books'], user['food'], user['hobbies'].split(',') if pd.notna(user['hobbies']) else [])
                 interests.display()
                 friend_request(user['username'])
+                st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.write("Please sign in first.")
 
@@ -206,42 +226,85 @@ def friend_request(other_user):
             st.session_state['friends'] = {}
 
         if current_user not in st.session_state['friends']:
-            st.session_state['friends'][current_user] = {'sent': [], 'received': [], 'friends': []}
+            st.session_state['friends'][current_user] = {'sent': [], 'received': [], 'friends': [], 'group_chats': []}
         if other_user not in st.session_state['friends']:
-            st.session_state['friends'][other_user] = {'sent': [], 'received': [], 'friends': []}
+            st.session_state['friends'][other_user] = {'sent': [], 'received': [], 'friends': [], 'group_chats': []}
 
-        if other_user not in st.session_state['friends'][current_user]['sent'] and other_user not in st.session_state['friends'][current_user]['friends']:
+        if other_user not in st.session_state['friends'][current_user]['friends']:
             if st.button(f"Send Friend Request to {other_user}", key=f"send_{other_user}"):
                 st.session_state['friends'][current_user]['sent'].append(other_user)
                 st.session_state['friends'][other_user]['received'].append(current_user)
+                save_friends_data()
                 st.write(f"Friend request sent to {other_user}")
 
-        if current_user in st.session_state['friends'][other_user]['received']:
+        if other_user in st.session_state['friends'][current_user]['received'] and current_user != other_user:
             if st.button(f"Accept Friend Request from {other_user}", key=f"accept_{other_user}"):
                 st.session_state['friends'][current_user]['friends'].append(other_user)
                 st.session_state['friends'][other_user]['friends'].append(current_user)
                 st.session_state['friends'][current_user]['received'].remove(other_user)
                 st.session_state['friends'][other_user]['sent'].remove(current_user)
+                save_friends_data()
                 st.write(f"Friend request accepted from {other_user}")
+
+        if other_user in st.session_state['friends'][current_user]['friends']:
+            if st.button(f"Remove {other_user} from friends", key=f"remove_{other_user}"):
+                st.session_state['friends'][current_user]['friends'].remove(other_user)
+                st.session_state['friends'][other_user]['friends'].remove(current_user)
+                save_friends_data()
+                st.write(f"{other_user} has been removed from friends")
 
 # Chat function
 def chat():
     friends = st.session_state['friends'].get(st.session_state['username'], {}).get('friends', [])
-    if friends:
-        friend = st.selectbox('Select a friend to chat with:', friends)
-        chat_history = load_chat(st.session_state['username'], friend)
+    group_chats = st.session_state['friends'].get(st.session_state['username'], {}).get('group_chats', [])
+    if friends or group_chats:
+        chat_options = friends + group_chats
+        chat_id = st.selectbox('Select a chat:', chat_options)
+        chat_history = load_chat(chat_id)
+
         for message in chat_history:
             st.write(f"{message['sender']}: {message['text']}")
+            if 'reply_to' in message:
+                st.write(f"↪️ {message['reply_to']['sender']}: {message['reply_to']['text']}", unsafe_allow_html=True)
+
         new_message = st.text_input("Enter a message:", key="new_message")
+        reply_to = st.selectbox("Reply to:", ["None"] + [f"{msg['sender']}: {msg['text']}" for msg in chat_history], key="reply_to")
+
         if st.button("Send", key="send_message"):
             message = {"sender": st.session_state['username'], "text": new_message}
-            save_chat(st.session_state['username'], friend, message)
+
+            if reply_to != "None":
+                reply_index = [f"{msg['sender']}: {msg['text']}" for msg in chat_history].index(reply_to) - 1
+                message["reply_to"] = chat_history[reply_index]
+
+            save_chat(chat_id, message)
             st.experimental_rerun()
+
+        # Automatically refresh the chat every 0.5 seconds
+        time.sleep(0.5)
+        st.experimental_rerun()
     else:
-        st.write("No friends to chat with. Send some friend requests!")
+        st.write("No friends or group chats to chat with. Send some friend requests or create group chats!")
+
+# Group chat creation function
+def create_group_chat():
+    friends = st.session_state['friends'].get(st.session_state['username'], {}).get('friends', [])
+    group_name = st.text_input("Group Name")
+    selected_friends = st.multiselect("Select friends to add to group:", friends)
+
+    if st.button("Create Group Chat"):
+        if group_name and selected_friends:
+            group_id = f"group_{st.session_state['username']}_{group_name}"
+            selected_friends.append(st.session_state['username'])
+            for friend in selected_friends:
+                st.session_state['friends'][friend]['group_chats'].append(group_id)
+            save_friends_data()
+            st.write("Group chat created!")
+        else:
+            st.write("Please enter a group name and select at least one friend.")
 
 # Sidebar navigation
-sidebar_option = st.sidebar.radio("Navigation", ["Home", "Interests", "Sign In", "Profile", "Chat"])
+sidebar_option = st.sidebar.radio("Navigation", ["Home", "Interests", "Sign In", "Profile", "Chat", "Create Group Chat"])
 if sidebar_option == "Interests":
     if 'logged_in' in st.session_state and st.session_state['logged_in']:
         give_int()
@@ -263,3 +326,23 @@ elif sidebar_option == "Chat":
         chat()
     else:
         st.write("Please sign in first.")
+elif sidebar_option == "Create Group Chat":
+    if 'logged_in' in st.session_state and st.session_state['logged_in']:
+        create_group_chat()
+    else:
+        st.write("Please sign in first.")
+
+# Apply custom styling
+st.markdown("""
+    <style>
+    .sidebar .sidebar-content {
+        background-color: #000;
+    }
+    .css-1d391kg {
+        color: #fff;
+    }
+    .css-1v0mbdj {
+        background-color: #00f;
+    }
+    </style>
+    """, unsafe_allow_html=True)
