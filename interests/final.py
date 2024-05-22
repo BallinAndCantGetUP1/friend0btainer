@@ -266,6 +266,7 @@ def search_for_friends():
 def chat():
     friends = st.session_state['friends'].get(st.session_state['username'], {}).get('friends', [])
     group_chats = st.session_state['friends'].get(st.session_state['username'], {}).get('group_chats', [])
+    
     if friends or group_chats:
         chat_options = friends + group_chats
         chat_id = st.selectbox('Select a chat:', chat_options)
@@ -297,12 +298,13 @@ def chat():
             if st.button("Leave Group Chat", key="leave_group"):
                 st.session_state['friends'][st.session_state['username']]['group_chats'].remove(chat_id)
                 for friend in friends:
-                    if chat_id in st.session_state['friends'][friend]['group_chats']:
+                    if 'group_chats' in st.session_state['friends'][friend] and chat_id in st.session_state['friends'][friend]['group_chats']:
                         st.session_state['friends'][friend]['group_chats'].remove(chat_id)
                 save_friends_data()
                 st.experimental_rerun()
     else:
         st.write("No friends or group chats to chat with. Send some friend requests or create group chats!")
+
 
 # Group chat creation function
 def create_group_chat():
