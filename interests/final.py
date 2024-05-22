@@ -58,7 +58,7 @@ def signingin():
     st.title("Sign In / Sign Up")
 
     # File selection
-    file options = ['Sign Up', 'Sign In']
+    file_options = ['Sign Up', 'Sign In']
     selected_file = st.selectbox('Choose What To Do:', file_options)
 
     # Display content based on file selection
