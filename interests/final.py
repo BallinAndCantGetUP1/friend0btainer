@@ -236,26 +236,29 @@ def friend_request(other_user):
         if other_user not in st.session_state['friends']:
             st.session_state['friends'][other_user] = {'sent': [], 'received': [], 'friends': [], 'group_chats': []}
 
-        if other_user not in st.session_state['friends'][current_user]['friends']:
-            if st.button(f"Send Friend Request to {other_user}", key=f"send_{other_user}"):
-                st.session_state['friends'][current_user]['sent'].append(other_user)
-                st.session_state['friends'][other_user]['received'].append(current_user)
-                save_friends_data()
-                st.write(f"Friend request sent to {other_user}")
+        current_user_friends = st.session_state['friends'][current_user]['friends']
+        other_user_friends = st.session_state['friends'][other_user]['friends']
 
-        if other_user in st.session_state['friends'][current_user]['received'] and current_user != other_user:
-            if st.button(f"Accept Friend Request from {other_user}", key=f"accept_{other_user}"):
-                st.session_state['friends'][current_user]['friends'].append(other_user)
-                st.session_state['friends'][other_user]['friends'].append(current_user)
-                st.session_state['friends'][current_user]['received'].remove(other_user)
-                st.session_state['friends'][other_user]['sent'].remove(current_user)
-                save_friends_data()
-                st.write(f"Friend request accepted from {other_user}")
+        if other_user not in current_user_friends:
+            if current_user in st.session_state['friends'][other_user]['received']:
+                if st.button(f"Accept Friend Request from {other_user}", key=f"accept_{other_user}"):
+                    current_user_friends.append(other_user)
+                    other_user_friends.append(current_user)
+                    st.session_state['friends'][current_user]['received'].remove(other_user)
+                    st.session_state['friends'][other_user]['sent'].remove(current_user)
+                    save_friends_data()
+                    st.write(f"Friend request accepted from {other_user}")
+            elif other_user not in st.session_state['friends'][current_user]['sent']:
+                if st.button(f"Send Friend Request to {other_user}", key=f"send_{other_user}"):
+                    st.session_state['friends'][current_user]['sent'].append(other_user)
+                    st.session_state['friends'][other_user]['received'].append(current_user)
+                    save_friends_data()
+                    st.write(f"Friend request sent to {other_user}")
 
-        if other_user in st.session_state['friends'][current_user]['friends']:
+        if other_user in current_user_friends:
             if st.button(f"Remove {other_user} from friends", key=f"remove_{other_user}"):
-                st.session_state['friends'][current_user]['friends'].remove(other_user)
-                st.session_state['friends'][other_user]['friends'].remove(current_user)
+                current_user_friends.remove(other_user)
+                other_user_friends.remove(current_user)
                 save_friends_data()
                 st.write(f"{other_user} has been removed from friends")
 
@@ -288,8 +291,6 @@ def chat():
                 message["reply_to"] = chat_history[reply_index]
 
             save_chat(chat_id, message)
-            if chat_id in friends:
-                save_chat(f"{chat_id}_{st.session_state['username']}", message)
             st.experimental_rerun()
 
         if st.button("Delete Chat History"):
