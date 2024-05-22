@@ -42,6 +42,7 @@ def load_chat(username1, username2):
             chat_history = pickle.load(file)
     return chat_history
 
+# Clear chat messages
 def clear_chat(username1, username2):
     filename = f'chat_{username1}_{username2}.pkl' if username1 < username2 else f'chat_{username2}_{username1}.pkl'
     if os.path.exists(filename):
