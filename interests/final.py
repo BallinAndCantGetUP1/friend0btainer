@@ -317,7 +317,7 @@ def create_group_chat():
             save_friends_data()
             st.write("Group chat created!")
         else:
-            st.write("Please enter a group name and select at least one friend.")
+            st.write("Please enter a group name, and select at least one friend.")
 
 # Sidebar navigation
 sidebar_option = st.sidebar.radio("Navigation", ["Home", "Interests", "Sign In", "Profile", "Chat", "Create Group Chat"])
