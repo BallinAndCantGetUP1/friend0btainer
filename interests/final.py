@@ -265,31 +265,46 @@ def friend_request(other_user):
 def chat():
     friends = st.session_state['friends'].get(st.session_state['username'], {}).get('friends', [])
     chats = st.session_state['friends'].get(st.session_state['username'], {}).get('chats', [])
-    
+
     if friends or chats:
         selected_friend = st.selectbox('Select a friend to chat with:', friends, key="select_friend")
         if selected_friend:
             chat_id = f"{min(st.session_state['username'], selected_friend)}_and_{max(st.session_state['username'], selected_friend)}"
+            
+            # Load chat history
             chat_history = load_chat(chat_id)
 
-            for message in chat_history:
+            # Display chat history
+            for idx, message in enumerate(chat_history):
                 st.write(f"{message['sender']}: {message['text']}")
                 if 'reply_to' in message:
                     st.write(f"↪️ {message['reply_to']['sender']}: {message['reply_to']['text']}", unsafe_allow_html=True)
 
-            new_message = st.text_input("Enter a message:", key="new_message")
-            reply_to = st.selectbox("Reply to:", ["None"] + [f"{msg['sender']}: {msg['text']}" for msg in chat_history], key="reply_to")
+            # Clear the input fields and reply selection when switching friends
+            st.session_state.setdefault('chat_inputs', {}).setdefault(chat_id, {"new_message": "", "reply_to": "None"})
+            st.session_state['chat_inputs'][chat_id]["new_message"] = st.text_input("Enter a message:", value="", key=f"new_message_{chat_id}")
+            st.session_state['chat_inputs'][chat_id]["reply_to"] = st.selectbox(
+                "Reply to:",
+                ["None"] + [f"{msg['sender']}: {msg['text']}" for msg in chat_history],
+                key=f"reply_to_{chat_id}"
+            )
 
-            if st.button("Send", key="send_message"):
+            # Send message button
+            if st.button("Send", key=f"send_message_{chat_id}"):
+                new_message = st.session_state['chat_inputs'][chat_id]["new_message"]
+                reply_to = st.session_state['chat_inputs'][chat_id]["reply_to"]
+
                 message = {"sender": st.session_state['username'], "text": new_message}
-
                 if reply_to != "None":
                     reply_index = [f"{msg['sender']}: {msg['text']}" for msg in chat_history].index(reply_to) - 1
                     message["reply_to"] = chat_history[reply_index]
 
                 save_chat(chat_id, message)
+                # Clear input after sending the message
+                st.session_state['chat_inputs'][chat_id]["new_message"] = ""
                 st.experimental_rerun()
 
+            # Re-run the app every 0.5 seconds to update the chat dynamically
             time.sleep(0.5)
             st.experimental_rerun()
     else:
