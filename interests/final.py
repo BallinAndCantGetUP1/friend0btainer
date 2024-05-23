@@ -341,8 +341,38 @@ def create_group_chat():
         else:
             st.write("Please enter a group name, and select at least one friend.")
 
+# Display friends list and option to remove friends
+def display_friends():
+    friends = st.session_state['friends'].get(st.session_state['username'], {}).get('friends', [])
+    if friends:
+        st.write("Your Friends:")
+        for friend in friends:
+            with st.container():
+                st.write(f"**{friend}**")
+                if st.button(f"Remove {friend}", key=f"remove_friend_{friend}"):
+                    # Remove friend from both users' friend lists
+                    st.session_state['friends'][st.session_state['username']]['friends'].remove(friend)
+                    st.session_state['friends'][friend]['friends'].remove(st.session_state['username'])
+
+                    # Remove chat history
+                    chat_id = f"{min(st.session_state['username'], friend)}_and_{max(st.session_state['username'], friend)}"
+                    if chat_id in st.session_state['friends'][st.session_state['username']]['chats']:
+                        st.session_state['friends'][st.session_state['username']]['chats'].remove(chat_id)
+                    if chat_id in st.session_state['friends'][friend]['chats']:
+                        st.session_state['friends'][friend]['chats'].remove(chat_id)
+
+                    chat_file = f'chat_{chat_id}.pkl'
+                    if os.path.exists(chat_file):
+                        os.remove(chat_file)
+
+                    save_friends_data()
+                    st.write(f"Removed {friend} from your friends list and deleted the chat.")
+                    st.experimental_rerun()
+    else:
+        st.write("You have no friends added.")
+
 # Sidebar navigation
-sidebar_option = st.sidebar.radio("Navigation", ["Home", "Interests", "Sign In", "Profile", "Chat", "Create Group Chat"], key="sidebar_nav")
+sidebar_option = st.sidebar.radio("Navigation", ["Home", "Interests", "Sign In", "Profile", "Chat", "Create Group Chat", "Friends"], key="sidebar_nav")
 if sidebar_option == "Interests":
     if 'logged_in' in st.session_state and st.session_state['logged_in']:
         give_int()
@@ -367,6 +397,11 @@ elif sidebar_option == "Chat":
 elif sidebar_option == "Create Group Chat":
     if 'logged_in' in st.session_state and st.session_state['logged_in']:
         create_group_chat()
+    else:
+        st.write("Please sign in first.")
+elif sidebar_option == "Friends":
+    if 'logged_in' in st.session_state and st.session_state['logged_in']:
+        display_friends()
     else:
         st.write("Please sign in first.")
 
