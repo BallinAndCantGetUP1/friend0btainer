@@ -243,7 +243,7 @@ def friend_request(other_user):
                     st.session_state['friends'][current_user]['sent'].remove(other_user)
                     
                     # Create shared chat between users
-                    chat_id = f"{current_user} and {other_user}'s chat"
+                    chat_id = f"{current_user}_and_{other_user}"
                     st.session_state['friends'][current_user]['chat'] = chat_id
                     st.session_state['friends'][other_user]['chat'] = chat_id
 
@@ -270,35 +270,36 @@ def chat():
     if friends or group_chats:
         chat_options = [st.session_state['friends'][st.session_state['username']].get('chat', None)] + group_chats
         chat_id = st.selectbox('Select a chat:', chat_options, key="select_chat")
-        chat_history = load_chat(chat_id)
+        if chat_id:
+            chat_history = load_chat(chat_id)
 
-        for message in chat_history:
-            st.write(f"{message['sender']}: {message['text']}")
-            if 'reply_to' in message:
-                st.write(f"↪️ {message['reply_to']['sender']}: {message['reply_to']['text']}", unsafe_allow_html=True)
+            for message in chat_history:
+                st.write(f"{message['sender']}: {message['text']}")
+                if 'reply_to' in message:
+                    st.write(f"↪️ {message['reply_to']['sender']}: {message['reply_to']['text']}", unsafe_allow_html=True)
 
-        new_message = st.text_input("Enter a message:", key="new_message")
-        reply_to = st.selectbox("Reply to:", ["None"] + [f"{msg['sender']}: {msg['text']}" for msg in chat_history], key="reply_to")
+            new_message = st.text_input("Enter a message:", key="new_message")
+            reply_to = st.selectbox("Reply to:", ["None"] + [f"{msg['sender']}: {msg['text']}" for msg in chat_history], key="reply_to")
 
-        if st.button("Send", key="send_message"):
-            message = {"sender": st.session_state['username'], "text": new_message}
+            if st.button("Send", key="send_message"):
+                message = {"sender": st.session_state['username'], "text": new_message}
 
-            if reply_to != "None":
-                reply_index = [f"{msg['sender']}: {msg['text']}" for msg in chat_history].index(reply_to) - 1
-                message["reply_to"] = chat_history[reply_index]
+                if reply_to != "None":
+                    reply_index = [f"{msg['sender']}: {msg['text']}" for msg in chat_history].index(reply_to) - 1
+                    message["reply_to"] = chat_history[reply_index]
 
-            save_chat(chat_id, message)
+                save_chat(chat_id, message)
+                st.experimental_rerun()
+
+            if "group_" in chat_id and st.button("Leave Group Chat", key="leave_group"):
+                for friend in st.session_state['friends'][st.session_state['username']]['group_chats']:
+                    st.session_state['friends'][friend]['group_chats'].remove(chat_id)
+                save_friends_data()
+                st.experimental_rerun()
+
+            # Automatically refresh the chat every 0.5 seconds
+            time.sleep(0.5)
             st.experimental_rerun()
-
-        if "group_" in chat_id and st.button("Leave Group Chat", key="leave_group"):
-            for friend in st.session_state['friends'][st.session_state['username']]['group_chats']:
-                st.session_state['friends'][friend]['group_chats'].remove(chat_id)
-            save_friends_data()
-            st.experimental_rerun()
-
-        # Automatically refresh the chat every 0.5 seconds
-        time.sleep(0.5)
-        st.experimental_rerun()
     else:
         st.write("No friends or group chats to chat with. Send some friend requests or create group chats!")
 
