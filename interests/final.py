@@ -42,12 +42,6 @@ def load_chat(chat_id):
             chat_history = pickle.load(file)
     return chat_history
 
-# Delete chat history
-def delete_chat_history(chat_id):
-    filename = f'chat_{chat_id}.pkl'
-    if os.path.exists(filename):
-        os.remove(filename)
-
 # Save friends data
 def save_friends_data():
     with open('friends_data.pkl', 'wb') as file:
@@ -248,6 +242,11 @@ def friend_request(other_user):
                     st.session_state['friends'][other_user]['received'].remove(current_user)
                     st.session_state['friends'][current_user]['sent'].remove(other_user)
                     
+                    # Create shared chat between users
+                    chat_id = f"{current_user} and {other_user}'s chat"
+                    st.session_state['friends'][current_user]['chat'] = chat_id
+                    st.session_state['friends'][other_user]['chat'] = chat_id
+
                     save_friends_data()
                     st.write(f"Friend request accepted from {other_user}")
             elif other_user not in st.session_state['friends'][current_user]['sent']:
@@ -264,16 +263,12 @@ def friend_request(other_user):
                 save_friends_data()
                 st.write(f"{other_user} has been removed from friends")
 
-                # Remove chat history
-                delete_chat_history(f"{current_user}_{other_user}")
-                delete_chat_history(f"{other_user}_{current_user}")
-
 # Chat function
 def chat():
     friends = st.session_state['friends'].get(st.session_state['username'], {}).get('friends', [])
     group_chats = st.session_state['friends'].get(st.session_state['username'], {}).get('group_chats', [])
     if friends or group_chats:
-        chat_options = friends + group_chats
+        chat_options = [st.session_state['friends'][st.session_state['username']].get('chat', None)] + group_chats
         chat_id = st.selectbox('Select a chat:', chat_options, key="select_chat")
         chat_history = load_chat(chat_id)
 
@@ -293,10 +288,6 @@ def chat():
                 message["reply_to"] = chat_history[reply_index]
 
             save_chat(chat_id, message)
-            st.experimental_rerun()
-
-        if st.button("Delete Chat History", key="delete_chat"):
-            delete_chat_history(chat_id)
             st.experimental_rerun()
 
         if "group_" in chat_id and st.button("Leave Group Chat", key="leave_group"):
