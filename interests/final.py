@@ -270,7 +270,7 @@ def chat():
         selected_friend = st.selectbox('Select a friend to chat with:', friends, key="select_friend")
         if selected_friend:
             chat_id = f"{min(st.session_state['username'], selected_friend)}_and_{max(st.session_state['username'], selected_friend)}"
-            
+
             # Ensure chat state is initialized
             if 'chat_inputs' not in st.session_state:
                 st.session_state['chat_inputs'] = {}
@@ -282,20 +282,24 @@ def chat():
 
             # Display chat history
             for message in chat_history:
-                st.write(f"{message['sender']}: {message['text']}")
                 if 'reply_to' in message:
-                    st.write(f"↪️ {message['reply_to']['sender']}: {message['reply_to']['text']}", unsafe_allow_html=True)
+                    st.write(f"{message['sender']}: {message['text']} ↪️ {message['reply_to']['sender']}: {message['reply_to']['text']}")
+                else:
+                    st.write(f"{message['sender']}: {message['text']}")
 
             # Chat input and reply selection
+            new_message_key = f"new_message_{chat_id}"
+            reply_to_key = f"reply_to_{chat_id}"
+
             st.session_state['chat_inputs'][chat_id]["new_message"] = st.text_input(
-                "Enter a message:", value=st.session_state['chat_inputs'][chat_id]["new_message"], key=f"new_message_{chat_id}"
+                "Enter a message:", value=st.session_state['chat_inputs'][chat_id]["new_message"], key=new_message_key
             )
             st.session_state['chat_inputs'][chat_id]["reply_to"] = st.selectbox(
                 "Reply to:",
                 ["None"] + [f"{msg['sender']}: {msg['text']}" for msg in chat_history],
                 index=0 if st.session_state['chat_inputs'][chat_id]["reply_to"] == "None" else \
                 ["None"] + [f"{msg['sender']}: {msg['text']}"].index(st.session_state['chat_inputs'][chat_id]["reply_to"]),
-                key=f"reply_to_{chat_id}"
+                key=reply_to_key
             )
 
             # Send message button
@@ -305,7 +309,7 @@ def chat():
 
                 message = {"sender": st.session_state['username'], "text": new_message}
                 if reply_to != "None":
-                    reply_index = [f"{msg['sender']}: {msg['text']}]" for msg in chat_history].index(reply_to) - 1
+                    reply_index = ["None"] + [f"{msg['sender']}: {msg['text']}"].index(reply_to) - 1
                     message["reply_to"] = chat_history[reply_index]
 
                 save_chat(chat_id, message)
