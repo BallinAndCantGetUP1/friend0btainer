@@ -281,7 +281,7 @@ def chat():
             chat_history = load_chat(chat_id)
 
             # Display chat history
-            for idx, message in chat_history:
+            for message in chat_history:
                 st.write(f"{message['sender']}: {message['text']}")
                 if 'reply_to' in message:
                     st.write(f"↪️ {message['reply_to']['sender']}: {message['reply_to']['text']}", unsafe_allow_html=True)
@@ -305,7 +305,7 @@ def chat():
 
                 message = {"sender": st.session_state['username'], "text": new_message}
                 if reply_to != "None":
-                    reply_index = [f"{msg['sender']}: {msg['text']}" for msg in chat_history].index(reply_to) - 1
+                    reply_index = [f"{msg['sender']}: {msg['text']}]" for msg in chat_history].index(reply_to) - 1
                     message["reply_to"] = chat_history[reply_index]
 
                 save_chat(chat_id, message)
