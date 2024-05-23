@@ -260,14 +260,26 @@ def friend_request(other_user):
 
                 save_friends_data()
                 st.write(f"Removed {other_user} from friends and deleted the chat.")
-
 # Chat function
 def chat():
+    if 'selected_friend' not in st.session_state:
+        st.session_state.selected_friend = None
+    if 'new_message' not in st.session_state:
+        st.session_state.new_message = ''
+    if 'reply_to' not in st.session_state:
+        st.session_state.reply_to = 'None'
+
     friends = st.session_state['friends'].get(st.session_state['username'], {}).get('friends', [])
     chats = st.session_state['friends'].get(st.session_state['username'], {}).get('chats', [])
     
     if friends or chats:
-        selected_friend = st.selectbox('Select a friend to chat with:', friends, key="select_friend")
+        selected_friend = st.selectbox('Select a friend to chat with:', friends, key="select_friend", index=friends.index(st.session_state.selected_friend) if st.session_state.selected_friend else 0)
+
+        if selected_friend and selected_friend != st.session_state.selected_friend:
+            st.session_state.selected_friend = selected_friend
+            st.session_state.new_message = ''
+            st.session_state.reply_to = 'None'
+
         if selected_friend:
             chat_id = f"{min(st.session_state['username'], selected_friend)}_and_{max(st.session_state['username'], selected_friend)}"
             chat_history = load_chat(chat_id)
@@ -277,17 +289,21 @@ def chat():
                 if 'reply_to' in message:
                     st.write(f"↪️ {message['reply_to']['sender']}: {message['reply_to']['text']}", unsafe_allow_html=True)
 
-            new_message = st.text_input("Enter a message:", key="new_message")
-            reply_to = st.selectbox("Reply to:", ["None"] + [f"{msg['sender']}: {msg['text']}" for msg in chat_history], key="reply_to")
+            new_message = st.text_input("Enter a message:", key="new_message", value=st.session_state.new_message)
+            reply_to = st.selectbox("Reply to:", ["None"] + [f"{msg['sender']}: {msg['text']}" for msg in chat_history], key="reply_to", index=(["None"] + [f"{msg['sender']}: {msg['text']}" for msg in chat_history]).index(st.session_state.reply_to))
 
             if st.button("Send", key="send_message"):
                 message = {"sender": st.session_state['username'], "text": new_message}
+                st.session_state.new_message = new_message  # Save state
 
                 if reply_to != "None":
                     reply_index = [f"{msg['sender']}: {msg['text']}" for msg in chat_history].index(reply_to) - 1
                     message["reply_to"] = chat_history[reply_index]
+                    st.session_state.reply_to = reply_to  # Save state
 
                 save_chat(chat_id, message)
+                st.session_state.new_message = ''  # Clear the input after sending
+                st.session_state.reply_to = 'None'  # Reset reply_to after sending
                 st.experimental_rerun()
 
             time.sleep(0.5)
