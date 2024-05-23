@@ -227,36 +227,47 @@ def friend_request(other_user):
 
         if current_user not in st.session_state['friends']:
             st.session_state['friends'][current_user] = {'friends': [], 'chats': []}
+        if other_user not in st.session_state['friends']:
+            st.session_state['friends'][other_user] = {'friends': [], 'chats': []}
 
-        if other_user not in st.session_state['friends'][current_user]['friends']:
-            if st.button(f"Send Friend Request to {other_user}"):
-                st.session_state['friends'][current_user]['friends'].append(other_user)
-                if other_user not in st.session_state['friends']:
-                    st.session_state['friends'][other_user] = {'friends': [], 'chats': []}
-                st.session_state['friends'][other_user]['friends'].append(current_user)
+        current_user_friends = st.session_state['friends'][current_user]['friends']
+        other_user_friends = st.session_state['friends'][other_user]['friends']
+
+        if other_user not in current_user_friends:
+            if st.button(f"Add {other_user} as friend", key=f"add_{other_user}"):
+                current_user_friends.append(other_user)
+                other_user_friends.append(current_user)
+
+                chat_id = f"{min(current_user, other_user)}_and_{max(current_user, other_user)}"
+                st.session_state['friends'][current_user]['chats'].append(chat_id)
+                st.session_state['friends'][other_user]['chats'].append(chat_id)
+
                 save_friends_data()
-                st.write(f"Friend request sent to {other_user}!")
+                st.write(f"Added {other_user} as a friend and started a chat.")
+
+        if other_user in current_user_friends:
+            if st.button(f"Remove {other_user} from friends", key=f"remove_{other_user}"):
+                current_user_friends.remove(other_user)
+                other_user_friends.remove(current_user)
+
+                chat_id = f"{min(current_user, other_user)}_and_{max(current_user, other_user)}"
+                st.session_state['friends'][current_user]['chats'].remove(chat_id)
+                st.session_state['friends'][other_user]['chats'].remove(chat_id)
+
+                chat_file = f'chat_{chat_id}.pkl'
+                if os.path.exists(chat_file):
+                    os.remove(chat_file)
+
+                save_friends_data()
+                st.write(f"Removed {other_user} from friends and deleted the chat.")
 
 # Chat function
 def chat():
-    if 'selected_friend' not in st.session_state:
-        st.session_state.selected_friend = None
-    if 'new_message' not in st.session_state:
-        st.session_state.new_message = ''
-    if 'reply_to' not in st.session_state:
-        st.session_state.reply_to = 'None'
-
     friends = st.session_state['friends'].get(st.session_state['username'], {}).get('friends', [])
     chats = st.session_state['friends'].get(st.session_state['username'], {}).get('chats', [])
     
     if friends or chats:
-        selected_friend = st.selectbox('Select a friend to chat with:', friends, key="select_friend", index=friends.index(st.session_state.selected_friend) if st.session_state.selected_friend else 0)
-
-        if selected_friend and selected_friend != st.session_state.selected_friend:
-            st.session_state.selected_friend = selected_friend
-            st.session_state.new_message = ''
-            st.session_state.reply_to = 'None'
-
+        selected_friend = st.selectbox('Select a friend to chat with:', friends, key="select_friend")
         if selected_friend:
             chat_id = f"{min(st.session_state['username'], selected_friend)}_and_{max(st.session_state['username'], selected_friend)}"
             chat_history = load_chat(chat_id)
@@ -266,19 +277,17 @@ def chat():
                 if 'reply_to' in message:
                     st.write(f"↪️ {message['reply_to']['sender']}: {message['reply_to']['text']}", unsafe_allow_html=True)
 
-            new_message = st.text_input("Enter a message:", key="new_message", value=st.session_state.new_message, on_change=lambda: st.session_state.update(new_message=st.session_state.new_message))
-            reply_to = st.selectbox("Reply to:", ["None"] + [f"{msg['sender']}: {msg['text']}" for msg in chat_history], key="reply_to", index=(["None"] + [f"{msg['sender']}: {msg['text']}" for msg in chat_history]).index(st.session_state.reply_to), on_change=lambda: st.session_state.update(reply_to=st.session_state.reply_to))
+            new_message = st.text_input("Enter a message:", key="new_message")
+            reply_to = st.selectbox("Reply to:", ["None"] + [f"{msg['sender']}: {msg['text']}" for msg in chat_history], key="reply_to")
 
             if st.button("Send", key="send_message"):
-                message = {"sender": st.session_state['username'], "text": st.session_state.new_message}
+                message = {"sender": st.session_state['username'], "text": new_message}
 
-                if st.session_state.reply_to != "None":
-                    reply_index = [f"{msg['sender']}: {msg['text']}" for msg in chat_history].index(st.session_state.reply_to) - 1
+                if reply_to != "None":
+                    reply_index = [f"{msg['sender']}: {msg['text']}" for msg in chat_history].index(reply_to) - 1
                     message["reply_to"] = chat_history[reply_index]
 
                 save_chat(chat_id, message)
-                st.session_state.new_message = ''  # Clear the input after sending
-                st.session_state.reply_to = 'None'  # Reset reply_to after sending
                 st.experimental_rerun()
 
             time.sleep(0.5)
@@ -286,20 +295,63 @@ def chat():
     else:
         st.write("No friends to chat with. Add some friends first.")
 
-# Main function to run the app
-def main():
-    if 'logged_in' not in st.session_state or not st.session_state['logged_in']:
-        signingin()
-    else:
-        st.sidebar.button("Sign Out", on_click=lambda: st.session_state.clear())
-        st.sidebar.button("Delete Account", on_click=display_profile)
-        pages = {
-            "Home": display_all_profiles,
-            "Update Interests": give_int,
-            "Chat": chat
-        }
-        choice = st.sidebar.selectbox("Go to", list(pages.keys()))
-        pages[choice]()
+# Group chat creation function
+def create_group_chat():
+    friends = st.session_state['friends'].get(st.session_state['username'], {}).get('friends', [])
+    group_name = st.text_input("Group Name", key="group_name")
+    selected_friends = st.multiselect("Select friends to add to group:", friends, key="selected_friends")
 
-if __name__ == "__main__":
-    main()
+    if st.button("Create Group Chat", key="create_group"):
+        if group_name and selected_friends:
+            group_id = f"group_{st.session_state['username']}_{group_name}"
+            selected_friends.append(st.session_state['username'])
+            for friend in selected_friends:
+                st.session_state['friends'][friend]['chats'].append(group_id)
+            save_friends_data()
+            st.write("Group chat created!")
+        else:
+            st.write("Please enter a group name, and select at least one friend.")
+
+# Sidebar navigation
+sidebar_option = st.sidebar.radio("Navigation", ["Home", "Interests", "Sign In", "Profile", "Chat", "Create Group Chat"], key="sidebar_nav")
+if sidebar_option == "Interests":
+    if 'logged_in' in st.session_state and st.session_state['logged_in']:
+        give_int()
+    else:
+        st.write("Please sign in first.")
+elif sidebar_option == "Home":
+    st.write('Welcome to the Home page! Use this tool to help you find friends.')
+    display_all_profiles()
+elif sidebar_option == "Sign In":
+    st.session_state['username'] = ''
+    signingin()
+elif sidebar_option == "Profile":
+    if 'logged_in' in st.session_state and st.session_state['logged_in']:
+        display_profile()
+    else:
+        st.write("Please sign in first.")
+elif sidebar_option == "Chat":
+    if 'logged_in' in st.session_state and st.session_state['logged_in']:
+        chat()
+    else:
+        st.write("Please sign in first.")
+elif sidebar_option == "Create Group Chat":
+    if 'logged_in' in st.session_state and st.session_state['logged_in']:
+        create_group_chat()
+    else:
+        st.write("Please sign in first.")
+
+# Apply custom styling
+st.markdown("""
+    <style>
+    .sidebar .sidebar-content {
+        background-color: #000;
+    }
+    .css-1d391kg {
+        color: #fff;
+    }
+    .css-1v0mbdj {
+        background-color: #00f;
+    }
+    </style>
+    """, unsafe_allow_html=True)
