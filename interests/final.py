@@ -122,7 +122,7 @@ def display_signin():
                 if 'friends' not in st.session_state:
                     st.session_state['friends'] = load_friends_data()
                 if username not in st.session_state['friends']:
-                    st.session_state['friends'][username] = {'sent': [], 'received': [], 'friends': [], 'group_chats': []}
+                    st.session_state['friends'][username] = {'friends': [], 'chats': []}
                 save_friends_data()
                 st.write("Logged In!")
             else:
@@ -226,51 +226,50 @@ def friend_request(other_user):
             st.session_state['friends'] = {}
 
         if current_user not in st.session_state['friends']:
-            st.session_state['friends'][current_user] = {'sent': [], 'received': [], 'friends': [], 'group_chats': []}
+            st.session_state['friends'][current_user] = {'friends': [], 'chats': []}
         if other_user not in st.session_state['friends']:
-            st.session_state['friends'][other_user] = {'sent': [], 'received': [], 'friends': [], 'group_chats': []}
+            st.session_state['friends'][other_user] = {'friends': [], 'chats': []}
 
         current_user_friends = st.session_state['friends'][current_user]['friends']
         other_user_friends = st.session_state['friends'][other_user]['friends']
 
         if other_user not in current_user_friends:
-            if current_user in st.session_state['friends'][other_user]['received']:
-                if st.button(f"Accept Friend Request from {other_user}", key=f"accept_{other_user}"):
-                    current_user_friends.append(other_user)
-                    other_user_friends.append(current_user)
-                    
-                    st.session_state['friends'][other_user]['received'].remove(current_user)
-                    st.session_state['friends'][current_user]['sent'].remove(other_user)
-                    
-                    # Create shared chat between users
-                    chat_id = f"{current_user}_and_{other_user}"
-                    st.session_state['friends'][current_user]['chat'] = chat_id
-                    st.session_state['friends'][other_user]['chat'] = chat_id
+            if st.button(f"Add {other_user} as friend", key=f"add_{other_user}"):
+                current_user_friends.append(other_user)
+                other_user_friends.append(current_user)
 
-                    save_friends_data()
-                    st.write(f"Friend request accepted from {other_user}")
-            elif other_user not in st.session_state['friends'][current_user]['sent']:
-                if st.button(f"Send Friend Request to {other_user}", key=f"send_{other_user}"):
-                    st.session_state['friends'][current_user]['sent'].append(other_user)
-                    st.session_state['friends'][other_user]['received'].append(current_user)
-                    save_friends_data()
-                    st.write(f"Friend request sent to {other_user}")
+                chat_id = f"{min(current_user, other_user)}_and_{max(current_user, other_user)}"
+                st.session_state['friends'][current_user]['chats'].append(chat_id)
+                st.session_state['friends'][other_user]['chats'].append(chat_id)
+
+                save_friends_data()
+                st.write(f"Added {other_user} as a friend and started a chat.")
 
         if other_user in current_user_friends:
             if st.button(f"Remove {other_user} from friends", key=f"remove_{other_user}"):
                 current_user_friends.remove(other_user)
                 other_user_friends.remove(current_user)
+
+                chat_id = f"{min(current_user, other_user)}_and_{max(current_user, other_user)}"
+                st.session_state['friends'][current_user]['chats'].remove(chat_id)
+                st.session_state['friends'][other_user]['chats'].remove(chat_id)
+
+                chat_file = f'chat_{chat_id}.pkl'
+                if os.path.exists(chat_file):
+                    os.remove(chat_file)
+
                 save_friends_data()
-                st.write(f"{other_user} has been removed from friends")
+                st.write(f"Removed {other_user} from friends and deleted the chat.")
 
 # Chat function
 def chat():
     friends = st.session_state['friends'].get(st.session_state['username'], {}).get('friends', [])
-    group_chats = st.session_state['friends'].get(st.session_state['username'], {}).get('group_chats', [])
-    if friends or group_chats:
-        chat_options = [st.session_state['friends'][st.session_state['username']].get('chat', None)] + group_chats
-        chat_id = st.selectbox('Select a chat:', chat_options, key="select_chat")
-        if chat_id:
+    chats = st.session_state['friends'].get(st.session_state['username'], {}).get('chats', [])
+    
+    if friends or chats:
+        selected_friend = st.selectbox('Select a friend to chat with:', friends, key="select_friend")
+        if selected_friend:
+            chat_id = f"{min(st.session_state['username'], selected_friend)}_and_{max(st.session_state['username'], selected_friend)}"
             chat_history = load_chat(chat_id)
 
             for message in chat_history:
@@ -291,17 +290,10 @@ def chat():
                 save_chat(chat_id, message)
                 st.experimental_rerun()
 
-            if "group_" in chat_id and st.button("Leave Group Chat", key="leave_group"):
-                for friend in st.session_state['friends'][st.session_state['username']]['group_chats']:
-                    st.session_state['friends'][friend]['group_chats'].remove(chat_id)
-                save_friends_data()
-                st.experimental_rerun()
-
-            # Automatically refresh the chat every 0.5 seconds
             time.sleep(0.5)
             st.experimental_rerun()
     else:
-        st.write("No friends or group chats to chat with. Send some friend requests or create group chats!")
+        st.write("No friends to chat with. Add some friends first.")
 
 # Group chat creation function
 def create_group_chat():
@@ -314,7 +306,7 @@ def create_group_chat():
             group_id = f"group_{st.session_state['username']}_{group_name}"
             selected_friends.append(st.session_state['username'])
             for friend in selected_friends:
-                st.session_state['friends'][friend]['group_chats'].append(group_id)
+                st.session_state['friends'][friend]['chats'].append(group_id)
             save_friends_data()
             st.write("Group chat created!")
         else:
