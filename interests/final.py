@@ -290,7 +290,7 @@ def chat():
                 save_chat(chat_id, message)
                 st.experimental_rerun()
 
-            time.sleep(0.5)
+            time.sleep(1.5)
             st.experimental_rerun()
     else:
         st.write("No friends to chat with. Add some friends first.")
